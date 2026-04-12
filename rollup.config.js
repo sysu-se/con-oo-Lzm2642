@@ -82,6 +82,7 @@ export default {
 		// browser on changes when not in production
 		!production && livereload({
 			watch: ['dist/bundle.js', 'dist/bundle.css'],
+                     host: '0.0.0.0',
 		}),
 
 		// If we're building for production (npm run build
@@ -103,7 +104,7 @@ function serve() {
 	return {
 		writeBundle() {
 			if (server) return;
-			server = require('child_process').spawn('npm', ['run', 'start', '--', '--dev'], {
+			server = require('child_process').spawn('npm', ['run', 'start', '--', '--dev', '--host', '0.0.0.0'], {
 				stdio: ['ignore', 'inherit', 'inherit'],
 				shell: true,
 			});
