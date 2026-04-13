@@ -1,27 +1,35 @@
 <script>
-	import { userGrid } from '@sudoku/stores/grid';
+	import { setGuess } from '@sudoku/stores/grid';
 	import { cursor } from '@sudoku/stores/cursor';
 	import { notes } from '@sudoku/stores/notes';
 	import { candidates } from '@sudoku/stores/candidates';
+	import { checkGameWon } from '@sudoku/stores/game';
 
 	// TODO: Improve keyboardDisabled
 	import { keyboardDisabled } from '@sudoku/stores/keyboard';
 
 	function handleKeyButton(num) {
-		if (!$keyboardDisabled) {
+		if (!$keyboardDisabled && $cursor.x !== null && $cursor.y !== null) {
 			if ($notes) {
+				// 笔记模式：记录候选数
 				if (num === 0) {
 					candidates.clear($cursor);
 				} else {
 					candidates.add($cursor, num);
 				}
-				userGrid.set($cursor, 0);
+				// 清空该位置的数字
+				setGuess($cursor, 0);
 			} else {
+				// 正常模式：填入数字
 				if ($candidates.hasOwnProperty($cursor.x + ',' + $cursor.y)) {
 					candidates.clear($cursor);
 				}
 
-				userGrid.set($cursor, num);
+				// 通过领域对象进行填数
+				setGuess($cursor, num);
+				
+				// 检查是否胜利
+				checkGameWon();
 			}
 		}
 	}
