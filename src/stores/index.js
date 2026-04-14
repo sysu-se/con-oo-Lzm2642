@@ -4,7 +4,7 @@
  */
 
 // Grid stores
-export { grid, userGrid, invalidCells, initGame, startNewGame, startCustomGame, setGuess, applyHint, getGame, checkWin } from './grid.js';
+export { grid, userGrid, invalidCells, initGame, startNewGame, startCustomGame, setGuess, applyHint, getGame, checkWin, canUndoStore, canRedoStore } from './grid.js';
 
 // Cursor store
 export { cursor } from './cursor.js';

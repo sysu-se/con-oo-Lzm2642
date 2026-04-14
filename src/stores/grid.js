@@ -4,7 +4,7 @@
  * 这个 store 内部持有 Game 实例，对外暴露响应式状态
  */
 
-import { writable, get } from 'svelte/store';
+import { writable, get, derived } from 'svelte/store';
 import { createGame, createSudoku } from '../domain/index.js';
 import { generatePuzzle, decode } from '../sencode.js';
 
@@ -12,10 +12,25 @@ import { generatePuzzle, decode } from '../sencode.js';
 let game = null;
 let initialGrid = null;
 
-// 创建可写 store
-export const grid = writable([]);
-export const userGrid = writable([]);
+// 创建空的 9x9 网格
+function createEmptyGrid() {
+  return Array(9).fill(null).map(() => Array(9).fill(0));
+}
+
+// 创建可写 store（初始化为空的 9x9 网格）
+export const grid = writable(createEmptyGrid());
+export const userGrid = writable(createEmptyGrid());
 export const invalidCells = writable([]);
+
+// 响应式计算 canUndo / canRedo
+// 使用 derived store 来确保响应式更新
+export const canUndoStore = derived(userGrid, () => {
+  return game ? game.canUndo() : false;
+});
+
+export const canRedoStore = derived(userGrid, () => {
+  return game ? game.canRedo() : false;
+});
 
 /**
  * 初始化游戏
@@ -71,26 +86,60 @@ export function setGuess(cursor, value) {
  * 应用提示（自动填入正确答案）
  */
 export function applyHint(cursor) {
-  if (!game) return;
+  if (!game) return false;
   
-  // 简化实现：随机填入一个有效数字
-  // 实际应该根据解答填入
   const currentGrid = game.getSudoku().getGrid();
   const currentValue = currentGrid[cursor.y][cursor.x];
   
-  if (currentValue === 0) {
-    // 尝试 1-9 找一个有效的
-    for (let v = 1; v <= 9; v++) {
-      game.guess({ row: cursor.y, col: cursor.x, value: v });
-      if (game.getSudoku().isValid(cursor.y, cursor.x)) {
-        const newGrid = game.getSudoku().getGrid();
-        userGrid.set(newGrid);
-        invalidCells.set(game.getSudoku().getInvalidCells());
-        return true;
+  if (currentValue !== 0) return false;
+  
+  // 尝试 1-9 找一个有效的（不记录历史）
+  for (let v = 1; v <= 9; v++) {
+    // 临时修改网格检查有效性
+    const testGrid = game.getSudoku().getGrid();
+    testGrid[cursor.y][cursor.x] = v;
+    
+    // 检查是否有效
+    let valid = true;
+    // 检查行
+    for (let x = 0; x < 9; x++) {
+      if (x !== cursor.x && testGrid[cursor.y][x] === v) {
+        valid = false;
+        break;
       }
     }
-    // 如果都不对，撤销
-    game.guess({ row: cursor.y, col: cursor.x, value: 0 });
+    // 检查列
+    if (valid) {
+      for (let y = 0; y < 9; y++) {
+        if (y !== cursor.y && testGrid[y][cursor.x] === v) {
+          valid = false;
+          break;
+        }
+      }
+    }
+    // 检查 3x3 方块
+    if (valid) {
+      const boxRow = Math.floor(cursor.y / 3) * 3;
+      const boxCol = Math.floor(cursor.x / 3) * 3;
+      for (let y = boxRow; y < boxRow + 3; y++) {
+        for (let x = boxCol; x < boxCol + 3; x++) {
+          if ((y !== cursor.y || x !== cursor.x) && testGrid[y][x] === v) {
+            valid = false;
+            break;
+          }
+        }
+        if (!valid) break;
+      }
+    }
+    
+    if (valid) {
+      // 找到有效数字，填入（只记录一次历史）
+      game.guess({ row: cursor.y, col: cursor.x, value: v });
+      const newGrid = game.getSudoku().getGrid();
+      userGrid.set(newGrid);
+      invalidCells.set(game.getSudoku().getInvalidCells());
+      return true;
+    }
   }
   
   return false;

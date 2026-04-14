@@ -7,7 +7,7 @@
 		"postbuild": "node scripts/postbuild.js",
 		"predev": "rimraf dist",
 		"dev": "rollup -c -w",
-		"start": "sirv dist",
+		"start": "sirv dist --cors --port 3000",
 		"test": "vitest run",
 		"test:contract": "vitest run tests/hw1/01-contract.test.js",
 		"test:sudoku": "vitest run tests/hw1/02-sudoku-basic.test.js",
